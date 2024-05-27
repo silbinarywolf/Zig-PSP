@@ -50,89 +50,14 @@ pub fn build_psp(b: *std.Build, comptime build_info: PSPBuildInfo) !void {
         // .single_threaded = true,
     });
 
-    exe.setLinkerScriptPath(b.path(build_info.path_to_sdk ++ "tools/linkfile.ld"));
+    // NOTE(jae): 2024-05-27
+    // commented out to reduce / simplify repro
+    // exe.setLinkerScriptPath(b.path(build_info.path_to_sdk ++ "tools/linkfile.ld"));
 
-    exe.link_eh_frame_hdr = true;
-    exe.link_emit_relocs = true;
-    // exe.install();
-    // b.installArtifact(exe);
+    // NOTE(jae): 2024-05-27
+    // commented out to reduce / simplify repro
+    // exe.link_eh_frame_hdr = true;
+    // exe.link_emit_relocs = true;
 
-    // exe.setOutputDir("zig-cache/");
-
-    //Post-build actions
-    const hostTarget = b.standardTargetOptions(.{});
-    const prx = b.addExecutable(.{
-        .name = "prxgen",
-        .root_source_file = b.path(build_info.path_to_sdk ++ "tools/prxgen/stub.zig"),
-        .link_libc = true,
-        .target = hostTarget,
-        .optimize = .ReleaseFast,
-    });
-    prx.addCSourceFile(.{
-        .file = b.path(build_info.path_to_sdk ++ "tools/prxgen/psp-prxgen.c"),
-        .flags = &[_][]const u8{
-            "-std=c99",
-            "-Wno-address-of-packed-member",
-            "-D_CRT_SECURE_NO_WARNINGS",
-        },
-    });
-    b.installArtifact(prx);
-    // prx.setOutputDir(build_info.path_to_sdk ++ "tools/bin");
-    // prx.install();
-    // prx.step.dependOn(&exe.step);
-
-    // const generate_prx = b.addSystemCommand(&[_][]const u8{ build_info.path_to_sdk ++ "tools/bin/prxgen" ++ append, "zig-cache/main", "app.prx" });
-    // generate_prx.step.dependOn(&prx.step);
-
-    const generate_prx_step = b.addRunArtifact(prx);
-    generate_prx_step.addArtifactArg(exe);
-    const prx_file = generate_prx_step.addOutputFileArg("app.prx");
-
-    //Build SFO
-    const sfo = b.addExecutable(.{
-        .name = "sfotool",
-        .root_source_file = b.path(build_info.path_to_sdk ++ "tools/sfo/src/main.zig"),
-        .target = hostTarget,
-        .optimize = optimize,
-    });
-    // sfo.setOutputDir(build_info.path_to_sdk ++ "tools/bin");
-    b.installArtifact(sfo);
-
-    //Make the SFO file
-    // const mk_sfo = b.addSystemCommand(&[_][]const u8{ build_info.path_to_sdk ++ "tools/bin/sfotool" ++ append, "write", build_info.title, "PARAM.SFO" });
-    const mk_sfo = b.addRunArtifact(sfo);
-    mk_sfo.addArg("write");
-    mk_sfo.addArg(build_info.title);
-    const sfo_file = mk_sfo.addOutputFileArg("PARAM.SFO");
-    // mk_sfo.step.dependOn(&sfo.step);
-
-    //Build PBP
-    const PBP = b.addExecutable(.{
-        .name = "pbptool",
-        .root_source_file = b.path(build_info.path_to_sdk ++ "tools/pbp/src/main.zig"),
-        .target = hostTarget,
-        .optimize = .ReleaseFast,
-    });
-    // PBP.setOutputDir(build_info.path_to_sdk ++ "tools/bin");
-
-    //Pack the PBP executable
-    const pack_pbp = b.addRunArtifact(PBP);
-    pack_pbp.addArg("pack");
-    const eboot_file = pack_pbp.addOutputFileArg("EBOOT.PBP");
-    pack_pbp.addFileArg(sfo_file);
-    pack_pbp.addFileArg(b.path(build_info.icon0));
-    pack_pbp.addFileArg(b.path(build_info.icon1));
-    pack_pbp.addFileArg(b.path(build_info.pic0));
-    pack_pbp.addFileArg(b.path(build_info.pic1));
-    pack_pbp.addFileArg(b.path(build_info.snd0));
-    pack_pbp.addFileArg(prx_file);
-    pack_pbp.addArg("NULL");
-
-    const install_file = b.addInstallBinFile(eboot_file, "EBOOT.PBP");
-    b.getInstallStep().dependOn(&install_file.step);
-
-    //Enable the build
-    // const install = b.getInstallStep();
-    // install.dependOn(&pack_pbp.step);
-    //b.default_step.dependOn(&pack_pbp.step);
+    b.installArtifact(exe);
 }
